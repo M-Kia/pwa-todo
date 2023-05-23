@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body style="margin: 50px">
+    <h1>Hello There.</h1>
+
+    <script>
+      async function regWorker() {
+        const publicKey =
+          "BHM0VeVBZ9AMxseYwz4qCVBggcb07DiwwsfxEpP17efENzyRYabaY6dnaIX8HysyAtkKkbT8U6IXwEkIHQDeTUc";
+
+        navigator.serviceWorker.register("4-sw.js", { scope: "/" });
+
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.pushManager
+            .subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: publicKey,
+            })
+            .then((sub) => {
+              fetch("/mypush", {
+                method: "POST",
+                body: JSON.stringify(sub),
+                headers: { "content-type": "application/json" },
+              })
+                .then((res) => res.json())
+                .then((res) => console.log(res))
+                .catch((err) => console.log(err));
+            })
+            .catch((err) => console.log(err));
+        });
+      }
+
+      window.onload = () => {
+        if (Notification.permission === "default") {
+          Notification.requestPermission().then((perm) => {
+            if (perm === "granted") {
+              regWorker().catch((err) => console.log(err));
+            } else {
+              alert("Please allow notification.");
+            }
+          });
+        } else if (Notification.permission === "granted") {
+          regWorker().catch((err) => console.log(err));
+        } else {
+          alert("Please allow notification.");
+        }
+      };
+    </script>
+  </body>
+</html>

@@ -1,15 +1,16 @@
 importScripts("/src/js/idb.js");
 importScripts("/src/js/utility.js");
-importScripts("https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js");
+importScripts("/src/js/controller.js");
 
-const apiRoute = "http://kia.tatdmo.ir/api/";
-const CACHE_STATIC_NAME = "static-v1";
-const CACHE_DYNAMIC_NAME = "dynamic-v1";
+const apiRoute = "http://localhost:3000/api/";
+const CACHE_STATIC_NAME = "static-v2";
+const CACHE_DYNAMIC_NAME = "dynamic-v2";
 const STATIC_FILES = [
   "/",
   "index.html",
   "src/js/app.js",
   "src/js/idb.js",
+  "src/js/controller.js",
   "src/js/utility.js",
   "src/css/reset.css",
   "src/css/home.css",
@@ -51,23 +52,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.url.includes(apiRoute)) {
-    event.respondWith(
-      fetch(event.request)
-        .then((res) => {
-          if (event.request.url === apiRoute + "get_todo") {
-            let clonedRes = res.clone();
-            clearAllData("todo")
-              .then(() => clonedRes.json())
-              .then((data) => {
-                for (d of data.data){
-                  writeData("todo", { ...d });
-                }
-              });
-            return res;
-          }
-        })
-        .catch((err) => {})
-    );
+    event.respondWith(fetch(event.request));
   } else if (
     STATIC_FILES.findIndex((val) => val === event.request.url) !== -1
   ) {
@@ -96,42 +81,18 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("sync", (event) => {
-  console.log("[Sevice Worker] background sync]", event);
-  if (event.tag === "sync-add-todo") {
-    console.log("[Service Worker] Syncing new Todo!");
-    event.waitUntil(
-      readAllData("sync-todo").then((data) => {
-        Promise.all(
-          Object.keys(data).map(async (dt) => {
-            let fd = makeFormData(data[dt].body);
-
-            return await fetch(data[dt].url, {
-              method: data[dt].method,
-              headers: {
-                Accept: "application/json",
-              },
-              body: fd,
-            })
-              .then((res) => res.json())
-              .then((res) => {
-                console.log("Sent data", res);
-                if (res.status) {
-                  return { status: true, id: data[dt].id };
-                }
-              })
-              .catch((err) => {
-                console.log("Error while sending data", err);
-                return { status: false };
-              });
-          })
-        ).then((res) => {
-          res.forEach((item) => {
-            if (item.status) {
-              deleteItemFormData("sync-todo", item.id);
-            }
-          });
-        });
-      })
-    );
+  switch (event.tag) {
+    case "sync-todo":
+      return event.waitUntil(
+        Todo.sync()
+          .then((res) => console.log(res))
+          .catch((err) => console.log(err))
+      );
+    case "sync-category":
+      return event.waitUntil(
+        Category.sync()
+          .then((res) => console.log(res))
+          .catch((err) => console.log(err))
+      );
   }
 });

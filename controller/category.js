@@ -6,6 +6,7 @@ exports.getAllCategories = (req, res, next) => {
       res.status(200).json({ status: true, data: categories });
     })
     .catch((err) => {
+      // console.log(err);
       res.status(500).json({ status: false });
     });
 };
@@ -19,11 +20,10 @@ exports.addCategory = (req, res, next) => {
   category
     .save()
     .then(() => {
-      console.log("Category saved successfully");
-      res.status(200).json({ status: true });
+      res.status(200).json({ status: true, data: result });
     })
     .catch((err) => {
-      console.log(err);
+      // console.log(err);
       res.status(500).json({ status: false });
     });
 };

@@ -82,7 +82,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/src/css/home.css" />
 
-    <title>PWA App</title>
+    <title>My ToDo</title>
   </head>
   <body>
     <header class="k-header">
@@ -96,6 +96,7 @@
             class="btn btn-primary"
             data-bs-toggle="modal"
             data-bs-target="#addModal"
+            onclick="loadModal()"
           >
             Add ToDo
           </button>
@@ -120,6 +121,7 @@
           </div>
           <div class="modal-body">
             <form class="k-form p-3" onsubmit="customSubmit(event)">
+              <input id="todo-id" name="id" value="0" hidden />
               <div class="row justify-content-between align-items-center mb-3">
                 <label for="todo-title" class="k-label col-12 col-sm-2">
                   Title:

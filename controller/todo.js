@@ -1,17 +1,18 @@
 const Todo = require("../models/todo");
 
-exports.getAllTodo = (req, res, next) => {
+exports.getAllTodo = async (req, res, next) => {
   Todo.find()
-  .populate('category_id')
+    .populate("category_id")
     .then((todoList) => {
-      res.status(200).json({ status: true, data: todoList, title: "My ToDo" });
+      res.status(200).json({ status: true, data: todoList });
     })
     .catch((err) => {
+      // console.log(err);
       res.status(500).json({ status: false });
     });
 };
 
-exports.addTodo = (req, res, next) => {
+exports.addTodo = async (req, res, next) => {
   const { title, description, time, category_id } = req.body;
 
   const todo = new Todo({
@@ -23,9 +24,34 @@ exports.addTodo = (req, res, next) => {
   });
   todo
     .save()
-    .then(() => {
-      console.log("Todo saved successfully");
-      res.status(200).json({ status: true });
+    .then((res) => Todo.findById(res._id).populate("category_id"))
+    .then((result) => {
+      // console.log(result);
+      res.status(200).json({ status: true, data: result });
+    })
+    .catch((err) => {
+      // console.log(err);
+      res.status(500).json({ status: false });
+    });
+};
+
+exports.updateTodo = async (req, res, next) => {
+  const { id } = req.params;
+
+  const { title, description, time, is_done, category_id } = req.body;
+  Todo.findById(id)
+    .then(async (todo) => {
+      todo.title = title;
+      todo.description = description;
+      todo.time = time;
+      todo.is_done = is_done;
+      todo.category_id = category_id;
+
+      return todo.save();
+    })
+    .then(() => Todo.findById(id).populate("category_id"))
+    .then((result) => {
+      res.status(200).json({ status: true, data: result });
     })
     .catch((err) => {
       console.log(err);
@@ -33,28 +59,16 @@ exports.addTodo = (req, res, next) => {
     });
 };
 
-exports.updateTodo = (req, res, next) => {
-  const { id } = req.params;
-
-  const { title, description, time, is_done, category_id } = req.body;
-
-  Todo.findById(id).then((todo) => {
-    todo.title = title;
-    todo.description = description;
-    todo.time = time;
-    todo.is_done = is_done;
-    todo.category_id = category_id;
-
-    todo.save();
-  });
-};
-
-exports.deleteTodo = (req, res, next) => {
+exports.deleteTodo = async (req, res, next) => {
   const { id } = req.params;
 
   Todo.findByIdAndRemove(id)
     .then(() => {
       console.log("todo deleted!");
+      res.status(200).json({ status: true });
     })
-    .catch((err) => console.log(err));
+    .catch((err) => {
+      // console.log(err);
+      res.status(200).json({ status: false });
+    });
 };

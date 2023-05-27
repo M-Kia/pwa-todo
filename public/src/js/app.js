@@ -1,11 +1,12 @@
-// if ("serviceWorker" in navigator) {
-//   navigator.serviceWorker.register("/sw.js").then(() => {
-//     console.log("Service Worker registered!");
-//   });
-// }
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").then(() => {
+    console.log("Service Worker registered!");
+  });
+}
 
 const apiRoute = "/api/";
 
+// DOM operations for TODO
 function addTodo(todo) {
   let checkboxId = `cbx-${todo._id}`;
   let checkBoxInput = document.createElement("input");
@@ -53,7 +54,7 @@ function addTodo(todo) {
   let timeP = document.createElement("p");
   timeP.innerHTML = createText(
     "Time",
-    new Date(todo.time).toLocaleDateString("fa", {
+    new Date(todo.time).toLocaleDateString("en-us", {
       weekday: "long",
       year: "numeric",
       month: "short",
@@ -65,11 +66,11 @@ function addTodo(todo) {
   editButton.setAttribute("data-bs-toggle", "modal");
   editButton.setAttribute("data-bs-target", "#addModal");
   editButton.innerHTML = `<svg stroke="#FFFFFF" fill="#FFFFFF" stroke-width="0" viewBox="0 0 24 24" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="m7 17.013 4.413-.015 9.632-9.54c.378-.378.586-.88.586-1.414s-.208-1.036-.586-1.414l-1.586-1.586c-.756-.756-2.075-.752-2.825-.003L7 12.583v4.43zM18.045 4.458l1.589 1.583-1.597 1.582-1.586-1.585 1.594-1.58zM9 13.417l6.03-5.973 1.586 1.586-6.029 5.971L9 15.006v-1.589z"></path><path d="M5 21h14c1.103 0 2-.897 2-2v-8.668l-2 2V19H8.158c-.026 0-.053.01-.079.01-.033 0-.066-.009-.1-.01H5V5h6.847l2-2H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2z"></path></svg>`;
-  // TODO: Edit Function
+  editButton.addEventListener("click", () => loadTodo(todo._id));
   let deleteButton = document.createElement("button");
   deleteButton.classList = "btn btn-danger me-4";
   deleteButton.innerHTML = `<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 20a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8h2V6h-4V4a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2H3v2h2zM9 4h6v2H9zM8 8h9v12H7V8z"></path><path d="M9 10h2v8H9zm4 0h2v8h-2z"></path></svg>`;
-  // TODO: Delete Function
+  deleteButton.addEventListener("click", () => deleteTodo(todo._id));
   let buttonContainer = document.createElement("div");
   buttonContainer.className =
     "w-100 d-flex justify-content-end align-items-center";
@@ -93,6 +94,42 @@ function addTodo(todo) {
   accordion.appendChild(accordionItem);
 }
 
+function loadModal(data) {
+  let todo_id = document.querySelector("#todo-id"),
+    todo_title = document.querySelector("#todo-title"),
+    todo_description = document.querySelector("#todo-description"),
+    todo_category = document.querySelector("#todo-category"),
+    todo_time = document.querySelector("#todo-time");
+
+  if (typeof data !== "undefined") {
+    const { _id, title, description, category_id, time } = data;
+
+    todo_id.value = _id;
+    todo_title.value = title;
+    todo_description.value = description;
+    todo_time.valueAsDate = new Date(time);
+
+    for (let i = 0; i < todo_category.options.length; i++) {
+      if (todo_category.options[i].value == category_id._id) {
+        todo_category.selectedIndex = i;
+        break;
+      }
+    }
+  } else {
+    todo_id.value = 0;
+    todo_title.value = "";
+    todo_description.value = "";
+    todo_time.value = "";
+    todo_category.selectedIndex = 0;
+  }
+}
+
+function loadTodo(id) {
+  Todo.getDetail(id).then((data) => {
+    loadModal(data);
+  });
+}
+
 function createText(key, value) {
   return `<b style="font-size: 18ps;">${key}: </b> ${value}`;
 }
@@ -100,82 +137,89 @@ function createText(key, value) {
 async function changeStatus(id) {
   let checkBox = document.querySelector(`#cbx-${id}`);
 
-  let fd = new FormData();
-  fd.append("conditions", `id/=/${id}`);
-  fd.append("keyvalues", `is_done,${!!checkBox.checked ? 1 : 0}`);
-
-  let res = await fetch(apiRoute + "Update_Todo", {
-    method: "POST",
-    body: fd,
+  Todo.edit(id, {
+    is_done: !!checkBox.checked,
   })
-    .then((res) => res.json())
-    .then((res) => {
-      if (+res.status !== 1) {
-        throw new Error("Error in updating TODO");
-      }
-    })
-    .catch((err) => {
-      console.log(err);
-      checkBox.checked = !checkBox.checked;
-    });
+    .catch((err) => console.log(err))
+    .finally(() => syncTodo(false));
 }
 
 async function customSubmit(event) {
   event.preventDefault();
-  let title = document.querySelector("#todo-title")?.value;
-  let description = document.querySelector("#todo-description")?.value;
-  let category = document.querySelector("#todo-category")?.value;
-  let time = document.querySelector("#todo-time")?.value;
+  let id = document.querySelector("#todo-id")?.value,
+    title = document.querySelector("#todo-title")?.value,
+    description = document.querySelector("#todo-description")?.value,
+    category = document.querySelector("#todo-category"),
+    time = document.querySelector("#todo-time")?.value;
 
-  if ("serviceWorker" in navigator && "SyncManager" in window) {
-    navigator.serviceWorker.ready.then((sw) => {
-      writeData("sync-todo", {
-        id: new Date().toISOString(),
-        url: apiRoute + "Insert_Todo",
-        method: "POST",
-        body: JSON.stringify({
-          title,
-          description,
-          category_id: category,
-          time: new Date(time).getTime().toString().slice(0, -3),
-        }),
-      })
-        .then(() => sw.sync.register(`sync-add-todo`))
-        .then(() => console.log("Your Todo was saved for syncing!"))
-        .catch((err) => console.log(err));
-    });
+  if (id == 0 || id == "") {
+    Todo.add({
+      title,
+      description,
+      category_id: {
+        _id: category.value,
+        title: category.selectedOptions[0].innerText,
+      },
+      time,
+    })
+      .catch((err) => console.log(err))
+      .finally(() => syncTodo(false));
+  } else {
+    Todo.edit(id, {
+      title,
+      description,
+      category_id: {
+        _id: category.value,
+        title: category.selectedOptions[0].innerText,
+      },
+      time,
+    })
+      .catch((err) => console.log(err))
+      .finally(() => syncTodo(false));
   }
 }
 
-async function loadData() {
-  let networkResponseReceived = false;
-
-  fetch(apiRoute + "todo", {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
-  })
-    .then((res) => {
-      networkResponseReceived = true;
-      return res.json();
-    })
-    .then((data) => {
-      let accordion = document.querySelector("#todoAccordion");
-      accordion.innerHTML = "";
-      data.data.forEach((todo) => addTodo(todo));
-    })
-    .catch((err) => {
-      console.log(err);
-    });
-
-  // if ("indexedDB" in window) {
-  //   readData("requests", url).then((data) => {
-  //     if (!networkResponseReceived && typeof data !== "undefined") {
-  //       return callback(data.data);
-  //     }
-  //   });
-  // }
+async function deleteTodo(id) {
+  Todo.delete(id)
+    .then((res) => console.log(res))
+    .catch((err) => console.log(err))
+    .finally(() => syncTodo(false));
 }
 
-window.addEventListener("load", () => loadData());
+function syncTodo(online = true) {
+  Todo.get(
+    (data) => {
+      let accordion = document.querySelector("#todoAccordion");
+      accordion.innerHTML = "";
+      data.forEach((todo) => addTodo(todo));
+    },
+    { online }
+  ).catch((err) => {
+    console.log(err);
+  });
+}
+
+// DOM operations for Category
+function syncCategories() {
+  Category.get((data) => {
+    let select = document.querySelector("#todo-category");
+    select.innerHTML = "";
+    data?.forEach((cats) => {
+      let option = document.createElement("option");
+      option.value = cats._id;
+      option.innerText = cats.title;
+
+      select.appendChild(option);
+    });
+  }).catch((err) => {
+    console.log(err);
+  });
+}
+
+// Load Page
+function loadData() {
+  syncTodo();
+  syncCategories();
+}
+
+window.addEventListener("load", loadData);

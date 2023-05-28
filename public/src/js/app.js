@@ -2,7 +2,7 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
 
-const apiRoute = "/api/";
+const apiRoute = "/kia-api/";
 const VapidPublicKey =
   "BHM0VeVBZ9AMxseYwz4qCVBggcb07DiwwsfxEpP17efENzyRYabaY6dnaIX8HysyAtkKkbT8U6IXwEkIHQDeTUc";
 
@@ -225,6 +225,7 @@ function displayNotification() {
     lang: "fa",
     vibrate: [100, 50, 200],
     badge: "/src/images/icons/app-icon-96x96.png",
+    data: { url: "" },
     tag: "confirm-notification",
     renotify: true,
     actions: [

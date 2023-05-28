@@ -1,5 +1,5 @@
 class Connection {
-  static apiRoute = "/api";
+  static apiRoute = "/kia-api";
 
   static get(apiName, query = {}) {
     return new Promise((resolve, reject) => {
@@ -110,24 +110,27 @@ class Todo extends Connection {
       let networkResponseReceived = false;
 
       if (online) {
+        let result;
         super
           .get("todo")
           .then(async (res) => {
-            await clearAllData(this.tableName)
-              .then(() =>
-                Promise.all(
-                  res.data.map(async (val) =>
-                    writeData(this.tableName, { ...val, status: [] })
-                  )
-                )
+            result = res;
+            return await clearAllData(this.tableName);
+          })
+          .then(() =>
+            Promise.all(
+              result.data.map(async (val) =>
+                writeData(this.tableName, { ...val, status: [] })
               )
-              .then(() => {
-                callback(res.data);
-                return resolve();
-              });
+            )
+          )
+          .then(() => {
+            callback(result.data);
+            return resolve();
           })
           .catch((err) => reject(err));
       }
+
       readAllData(this.tableName).then((data) => {
         if (!networkResponseReceived && typeof data !== "undefined") {
           callback(data.filter((val) => +val.status !== 3));
@@ -147,16 +150,18 @@ class Todo extends Connection {
   static add(body) {
     return new Promise((resolve, reject) => {
       if ("serviceWorker" in navigator && "SyncManager" in window) {
+        let regSw;
         navigator.serviceWorker.ready
-          .then(
-            async (sw) =>
-              await writeData(this.tableName, {
-                ...body,
-                is_done: false,
-                _id: Date.now().toString(),
-                status: 1,
-              }).then(() => sw.sync.register("sync-todo"))
-          )
+          .then(async (sw) => {
+            regSw = sw;
+            return await writeData(this.tableName, {
+              ...body,
+              is_done: false,
+              _id: Date.now().toString(),
+              status: 1,
+            });
+          })
+          .then(() => regSw.sync.register("sync-todo"))
           .then(() => resolve("Your Todo was added to indexedDB"))
           .catch((err) => reject(err));
       } else {
@@ -171,19 +176,20 @@ class Todo extends Connection {
   static edit(id, body) {
     return new Promise((resolve, reject) => {
       if ("serviceWorker" in navigator && "SyncManager" in window) {
+        let regSw;
         navigator.serviceWorker.ready
-          .then(
-            async (sw) =>
-              await readData(this.tableName, id)
-                .then((data) =>
-                  updateData(this.tableName, id, {
-                    ...data,
-                    ...body,
-                    status: +data.status === 1 ? 1 : 2,
-                  })
-                )
-                .then(() => sw.sync.register("sync-todo"))
+          .then(async (sw) => {
+            regSw = sw;
+            return await readData(this.tableName, id);
+          })
+          .then((data) =>
+            updateData(this.tableName, id, {
+              ...data,
+              ...body,
+              status: +data.status === 1 ? 1 : 2,
+            })
           )
+          .then(() => regSw.sync.register("sync-todo"))
           .then(() => resolve("Your Todo was saved to indexedDB!"))
           .catch((err) => reject(err));
       } else {
@@ -198,20 +204,23 @@ class Todo extends Connection {
   static delete(id) {
     return new Promise((resolve, reject) => {
       if ("serviceWorker" in navigator && "SyncManager" in window) {
+        let regSw;
         navigator.serviceWorker.ready
-          .then(
-            async (sw) =>
-              await readData(this.tableName, id).then((data) => {
-                if (+data.status === 1) {
-                  return deleteItemFormData(this.tableName, data._id);
-                } else {
-                  return updateData(this.tableName, id, {
-                    ...data,
-                    status: 3,
-                  }).then(() => sw.sync.register("sync-todo"));
-                }
-              })
-          )
+          .then(async (sw) => {
+            regSw = sw;
+            return await readData(this.tableName, id);
+          })
+          .then((data) => {
+            if (+data.status === 1) {
+              return deleteItemFormData(this.tableName, data._id);
+            } else {
+              return updateData(this.tableName, id, {
+                ...data,
+                status: 3,
+              });
+            }
+          })
+          .then(() => regSw.sync.register("sync-todo"))
           .then(() => resolve("Your Todo was saved to indexedDB!"))
           .catch((err) => reject(err));
       } else {
@@ -289,21 +298,23 @@ class Category extends Connection {
     return new Promise((resolve, reject) => {
       let networkResponseReceived = false;
 
+      let result;
       super
         .get("category")
         .then(async (res) => {
-          await clearAllData(this.tableName)
-            .then(() =>
-              Promise.all(
-                res.data.map(async (val) =>
-                  writeData(this.tableName, { ...val, status: 0 })
-                )
-              )
+          result = res;
+          return await clearAllData(this.tableName);
+        })
+        .then(() =>
+          Promise.all(
+            result.data.map(async (val) =>
+              writeData(this.tableName, { ...val, status: 0 })
             )
-            .then(() => {
-              callback(res.data);
-              return resolve();
-            });
+          )
+        )
+        .then(() => {
+          callback(result.data);
+          return resolve();
         })
         .catch((err) => reject(err));
 

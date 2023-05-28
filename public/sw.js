@@ -2,9 +2,9 @@ importScripts("/src/js/idb.js");
 importScripts("/src/js/utility.js");
 importScripts("/src/js/controller.js");
 
-const apiRoute = "http://localhost:3000/api/";
-const CACHE_STATIC_NAME = "static-v2";
-const CACHE_DYNAMIC_NAME = "dynamic-v2";
+const apiRoute = "/kia-api/";
+const CACHE_STATIC_NAME = "static-v1";
+const CACHE_DYNAMIC_NAME = "dynamic-v1";
 const STATIC_FILES = [
   "/",
   "index.html",
@@ -96,13 +96,51 @@ self.addEventListener("notificationclick", (event) => {
 
   console.log(notification);
   if (action === "confirm") {
-    console.log("Confirm was chosen");
+    notification.close();
   } else {
     console.log(action);
+    event.waitUntil(
+      clients.matchAll().then((clis) => {
+        let client = clis.find((c) => c.visibilityState === "visible");
+        
+        if (client !== undefined) {
+          client.navigate(`http://localhost:5000/${notification.data.url}`);
+          client.focus();
+        } else {
+          clients.openWindow(`http://localhost:5000/${notification.data.url}`);
+        }
+        notification.close();
+      })
+    );
   }
-  notification.close();
 });
 
 self.addEventListener("notificationclose", (event) => {
   console.log("Notification closed!", event);
+});
+
+self.addEventListener("push", (event) => {
+  console.log("Push notification received", event);
+
+  let data = {
+    title: "New notification",
+    content: "Check out what's going on!",
+    openUrl: "/",
+  };
+  if (event.data) {
+    data = JSON.parse(event.data.text());
+  }
+
+  console.log(data)
+
+  let options = {
+    body: data.content,
+    icon: "/src/images/icons/app-icon-96x96.png",
+    badge: "/src/images/icons/app-icon-96x96.png",
+    data: {
+      url: data.openUrl,
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });

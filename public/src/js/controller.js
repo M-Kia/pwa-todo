@@ -114,8 +114,7 @@ class Todo extends Connection {
           .get("todo")
           .then(async (res) => {
             await clearAllData(this.tableName)
-              .then(() => navigator.serviceWorker.ready)
-              .then((sw) =>
+              .then(() =>
                 Promise.all(
                   res.data.map(async (val) =>
                     writeData(this.tableName, { ...val, status: [] })
@@ -204,7 +203,7 @@ class Todo extends Connection {
             async (sw) =>
               await readData(this.tableName, id).then((data) => {
                 if (+data.status === 1) {
-                  return deleteItemFormData(data._id);
+                  return deleteItemFormData(this.tableName, data._id);
                 } else {
                   return updateData(this.tableName, id, {
                     ...data,
@@ -229,6 +228,10 @@ class Todo extends Connection {
       return readAllData(this.tableName).then((todoList) => {
         return Promise.all(
           todoList.map(async (val) => {
+            let the_id = val._id;
+            if (typeof val.main_id !== "undefined") {
+              the_id = val.main_id;
+            }
             switch (+val.status) {
               case 1:
                 return await super.add(val, "todo").then((res) => {
@@ -237,32 +240,26 @@ class Todo extends Connection {
                       ...res.data,
                       _id: val._id,
                       main_id: res.data._id,
-                      status: [],
+                      status: 0,
                     });
                     return true;
                   }
                   return false;
                 });
               case 2:
-                let data = { ...val };
-                if (typeof data.main_id !== "undefined") {
-                  data._id = data.main_id;
-                }
-                return await super.update(val._id, data, "todo").then((res) => {
-                  if (res) {
-                    updateData(this.tableName, val._id, {
-                      ...val,
-                      status: [],
-                    });
-                    return true;
-                  }
-                  return false;
-                });
+                return await super
+                  .update(the_id, { ...val, _id: the_id }, "todo")
+                  .then((res) => {
+                    if (res) {
+                      updateData(this.tableName, val._id, {
+                        ...val,
+                        status: 0,
+                      });
+                      return true;
+                    }
+                    return false;
+                  });
               case 3:
-                let the_id = val._id;
-                if (typeof val.main_id !== "undefined") {
-                  the_id = val.main_id;
-                }
                 return await super.delete(the_id, "todo").then((res) => {
                   if (res) {
                     deleteItemFormData(this.tableName, val._id);
@@ -296,8 +293,7 @@ class Category extends Connection {
         .get("category")
         .then(async (res) => {
           await clearAllData(this.tableName)
-            .then(() => navigator.serviceWorker.ready)
-            .then((sw) =>
+            .then(() =>
               Promise.all(
                 res.data.map(async (val) =>
                   writeData(this.tableName, { ...val, status: 0 })
@@ -315,126 +311,6 @@ class Category extends Connection {
         if (!networkResponseReceived && typeof data !== "undefined") {
           callback(data.filter((val) => +val.status !== 3));
         }
-      });
-    });
-  }
-
-  static add(body) {
-    return new Promise((resolve, reject) => {
-      if ("serviceWorker" in navigator && "SyncManager" in window) {
-        navigator.serviceWorker.ready
-          .then(
-            async (sw) =>
-              await writeData(this.tableName, {
-                ...body,
-                _id: Date.now().toString(),
-                status: 1,
-              }).then(() => sw.sync.register("sync-category"))
-          )
-          .then(() => resolve("Your Category was added to indexedDB"))
-          .catch((err) => reject(err));
-      } else {
-        super
-          .add(body, "category")
-          .then((res) => resolve(res))
-          .catch((err) => reject(err));
-      }
-    });
-  }
-
-  static edit(id, body) {
-    return new Promise((resolve, reject) => {
-      if ("serviceWorker" in navigator && "SyncManager" in window) {
-        navigator.serviceWorker.ready
-          .then(
-            async (sw) =>
-              await readData(this.tableName, id)
-                .then((data) =>
-                  updateData(this.tableName, id, {
-                    ...data,
-                    ...body,
-                    status: +data.status === 1 ? 1 : 2,
-                  })
-                )
-                .then(() => sw.sync.register("sync-category"))
-          )
-          .then(() => resolve("Your Category was saved to indexedDB!"))
-          .catch((err) => reject(err));
-      } else {
-        super
-          .update(id, body, "category")
-          .then((res) => resolve(res))
-          .catch((err) => reject(err));
-      }
-    });
-  }
-
-  static delete(id) {
-    return new Promise((resolve, reject) => {
-      if ("serviceWorker" in navigator && "SyncManager" in window) {
-        navigator.serviceWorker.ready
-          .then(
-            async (sw) =>
-              await readData(this.tableName, id).then((data) => {
-                if (+data.status === 1) {
-                  return deleteItemFormData(data._id);
-                } else {
-                  return updateData(this.tableName, id, {
-                    ...data,
-                    status: 3,
-                  }).then(() => {
-                    return sw.sync.register("sync-category");
-                  });
-                }
-              })
-          )
-          .then(() => resolve("Your Category was saved to indexedDB!"))
-          .catch((err) => reject(err));
-      } else {
-        super
-          .delete(id, "category")
-          .then((res) => resolve(res))
-          .catch((err) => reject(err));
-      }
-    });
-  }
-
-  static async sync() {
-    return new Promise((resolve, reject) => {
-      let categoryList = readAllData(this.tableName);
-      Promise.all(
-        categoryList.map(async (val) => {
-          switch (+val.status) {
-            case 1:
-              return await super.add(val, "category").then((res) => {
-                if (res) {
-                  return true;
-                }
-                return false;
-              });
-            case 2:
-              return await super
-                .update(val._id, val, "category")
-                .then((res) => {
-                  if (res) {
-                    return true;
-                  }
-                  return false;
-                });
-            case 3:
-              return await super.delete(val._id, "category").then((res) => {
-                if (res) {
-                  return true;
-                }
-                return false;
-              });
-          }
-        })
-      ).then((list) => {
-        if (list.length === 0 || list.some((val) => !val)) {
-          return resolve("List is synced.");
-        }
-        reject("All of list not synced!");
       });
     });
   }

@@ -88,11 +88,21 @@ self.addEventListener("sync", (event) => {
           .then((res) => console.log(res))
           .catch((err) => console.log(err))
       );
-    case "sync-category":
-      return event.waitUntil(
-        Category.sync()
-          .then((res) => console.log(res))
-          .catch((err) => console.log(err))
-      );
   }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  const { notification, action } = event;
+
+  console.log(notification);
+  if (action === "confirm") {
+    console.log("Confirm was chosen");
+  } else {
+    console.log(action);
+  }
+  notification.close();
+});
+
+self.addEventListener("notificationclose", (event) => {
+  console.log("Notification closed!", event);
 });

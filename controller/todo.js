@@ -12,6 +12,19 @@ exports.getAllTodo = async (req, res, next) => {
     });
 };
 
+exports.getSingleTodo = async (req, res, next) => {
+  const { id } = req.params;
+
+  Todo.findById(id)
+    .then((data) => {
+      res.status(200).json({ status: true, data });
+    })
+    .catch((err) => {
+      // console.log(err);
+      res.status(500).json({ status: false });
+    });
+};
+
 exports.addTodo = async (req, res, next) => {
   const { title, description, time, category_id } = req.body;
 
@@ -37,8 +50,8 @@ exports.addTodo = async (req, res, next) => {
 
 exports.updateTodo = async (req, res, next) => {
   const { id } = req.params;
-
   const { title, description, time, is_done, category_id } = req.body;
+
   Todo.findById(id)
     .then(async (todo) => {
       todo.title = title;
@@ -69,6 +82,6 @@ exports.deleteTodo = async (req, res, next) => {
     })
     .catch((err) => {
       // console.log(err);
-      res.status(200).json({ status: false });
+      res.status(500).json({ status: false });
     });
 };

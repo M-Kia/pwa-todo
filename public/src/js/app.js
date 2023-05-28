@@ -1,10 +1,10 @@
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").then(() => {
-    console.log("Service Worker registered!");
-  });
+  navigator.serviceWorker.register("/sw.js");
 }
 
 const apiRoute = "/api/";
+const VapidPublicKey =
+  "BHM0VeVBZ9AMxseYwz4qCVBggcb07DiwwsfxEpP17efENzyRYabaY6dnaIX8HysyAtkKkbT8U6IXwEkIHQDeTUc";
 
 // DOM operations for TODO
 function addTodo(todo) {
@@ -214,6 +214,90 @@ function syncCategories() {
   }).catch((err) => {
     console.log(err);
   });
+}
+
+function displayNotification() {
+  let options = {
+    body: "ایول، انجامش دادی!",
+    icon: "/src/images/icons/app-icon-96x96.png",
+    image: "/src/images/photo_2023-05-26_18-40-44.jpg",
+    dir: "rtl",
+    lang: "fa",
+    vibrate: [100, 50, 200],
+    badge: "/src/images/icons/app-icon-96x96.png",
+    tag: "confirm-notification",
+    renotify: true,
+    actions: [
+      {
+        action: "confirm",
+        title: "Okay",
+        icon: "/src/images/icons/app-icon-96x96.png",
+      },
+      {
+        action: "cancel",
+        title: "Cancel",
+        icon: "/src/images/icons/app-icon-96x96.png",
+      },
+    ],
+  };
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.ready.then((swreg) => {
+      swreg.showNotification("Successfully access granted! (from SW)", options);
+    });
+  }
+}
+
+function configurePushSub() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  let reg;
+  navigator.serviceWorker.ready
+    .then((swreg) => {
+      reg = swreg;
+      return swreg.pushManager.getSubscription();
+    })
+    .then((sub) => {
+      if (sub === null) {
+        let convertedVapidPublicKe = urlBase64ToUint8Array(VapidPublicKey);
+        return reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidPublicKe,
+        });
+      } else {
+      }
+    })
+    .then((newSub) =>
+      fetch(apiRoute + "subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(newSub),
+      })
+    )
+    .then((res) => res.json())
+    .then((res) => {
+      if (!!res.status) {
+        displayNotification();
+      }
+    })
+    .catch((err) => console.log(err));
+}
+
+function enableNotifications() {
+  if ("Notification" in window && "serviceWorker" in navigator) {
+    Notification.requestPermission((result) => {
+      console.log(result);
+      if (result !== "granted") {
+      } else {
+        // displayNotification();
+        configurePushSub();
+      }
+    });
+  }
 }
 
 // Load Page

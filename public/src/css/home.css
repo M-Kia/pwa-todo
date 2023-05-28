@@ -16,6 +16,7 @@ body {
 .k-header .k-nav-container {
   width: 60vw;
 }
+
 @media (max-width: 1300px) {
   .k-header .k-nav-container {
     width: 75vw;
@@ -34,7 +35,7 @@ body {
 }
 .k-header > div > div {
   display: flex;
-  justify-self: center;
+  justify-content: center;
 }
 .k-header > div > div:nth-child(odd) {
   width: 100px;

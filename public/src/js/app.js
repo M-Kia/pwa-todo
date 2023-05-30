@@ -181,7 +181,6 @@ async function customSubmit(event) {
 
 async function deleteTodo(id) {
   Todo.delete(id)
-    .then((res) => console.log(res))
     .catch((err) => console.log(err))
     .finally(() => syncTodo(false));
 }
@@ -266,7 +265,6 @@ function configurePushSub() {
           userVisibleOnly: true,
           applicationServerKey: convertedVapidPublicKe,
         });
-      } else {
       }
     })
     .then((newSub) =>
@@ -280,20 +278,18 @@ function configurePushSub() {
       })
     )
     .then((res) => res.json())
-    .then((res) => {
-      if (!!res.status) {
-        displayNotification();
-      }
-    })
+    // .then((res) => {
+    //   if (!!res.status) {
+    //     displayNotification();
+    //   }
+    // })
     .catch((err) => console.log(err));
 }
 
 function enableNotifications() {
   if ("Notification" in window && "serviceWorker" in navigator) {
     Notification.requestPermission((result) => {
-      console.log(result);
-      if (result !== "granted") {
-      } else {
+      if (result === "granted") {
         // displayNotification();
         configurePushSub();
       }

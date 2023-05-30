@@ -94,15 +94,13 @@ self.addEventListener("sync", (event) => {
 self.addEventListener("notificationclick", (event) => {
   const { notification, action } = event;
 
-  console.log(notification);
   if (action === "confirm") {
     notification.close();
   } else {
-    console.log(action);
     event.waitUntil(
       clients.matchAll().then((clis) => {
         let client = clis.find((c) => c.visibilityState === "visible");
-        
+
         if (client !== undefined) {
           client.navigate(`http://localhost:5000/${notification.data.url}`);
           client.focus();
@@ -115,13 +113,7 @@ self.addEventListener("notificationclick", (event) => {
   }
 });
 
-self.addEventListener("notificationclose", (event) => {
-  console.log("Notification closed!", event);
-});
-
 self.addEventListener("push", (event) => {
-  console.log("Push notification received", event);
-
   let data = {
     title: "New notification",
     content: "Check out what's going on!",
@@ -130,8 +122,6 @@ self.addEventListener("push", (event) => {
   if (event.data) {
     data = JSON.parse(event.data.text());
   }
-
-  console.log(data)
 
   let options = {
     body: data.content,

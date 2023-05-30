@@ -88,7 +88,7 @@
     <header class="k-header">
       <div class="k-nav-container">
         <div>
-          <button class="btn btn-warning" onclick="enableNotifications()">
+          <button id="enable-notification-button" class="btn btn-warning" onclick="enableNotifications()">
             <svg
               stroke="currentColor"
               fill="currentColor"
@@ -244,17 +244,5 @@
     <!-- Custom JS -->
     <script src="/src/js/app.js"></script>
 
-    <!-- <script>
-      // bootstrap tooast initialization
-      let temp = [].slice.call(document.querySelectorAll(".toast"));
-      let list = temp.map((toastEl) => {
-        console.log(bootstrap);
-        return new bootstrap.Toast(toastEl);
-      });
-
-      document
-        .querySelector("#liveToastBtn")
-        .addEventListener("click", () => list[0].show());
-    </script> -->
   </body>
 </html>
